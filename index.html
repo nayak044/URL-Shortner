@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>URL Shortener</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      padding: 2rem;
+      text-align: center;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 1rem;
+      margin: 0.5rem;
+      width: 300px;
+      max-width: 90%;
+    }
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    .result, .analytics {
+      margin-top: 2rem;
+    }
+    .analytics ul {
+      list-style: none;
+      padding: 0;
+    }
+    .analytics li {
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 URL Shortener</h1>
+
+  <input type="text" id="longUrl" placeholder="Enter your long URL" />
+  <br>
+  <button onclick="shortenUrl()">Shorten</button>
+
+  <div class="result" id="result"></div>
+  <div class="analytics" id="analytics"></div>
+
+  <script>
+    const backend = "http://localhost:8000";
+
+    async function shortenUrl() {
+      const urlInput = document.getElementById("longUrl").value;
+      const resultDiv = document.getElementById("result");
+      const analyticsDiv = document.getElementById("analytics");
+
+      resultDiv.innerHTML = "Processing...";
+      analyticsDiv.innerHTML = "";
+
+      try {
+        const res = await fetch(`${backend}/url`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: urlInput }),
+        });
+
+        const data = await res.json();
+        if (data.error) {
+          resultDiv.innerHTML = `<p style="color:red">${data.error}</p>`;
+          return;
+        }
+
+        const shortId = data.id;
+        const shortUrl = `${backend}/url/${shortId}`;
+
+        resultDiv.innerHTML = `
+          <p><strong>Short URL:</strong> <a href="${shortUrl}" target="_blank">${shortUrl}</a></p>
+          <button onclick="getAnalytics('${shortId}')">View Analytics</button>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = "<p style='color:red;'>Something went wrong</p>";
+        console.error(error);
+      }
+    }
+
+    async function getAnalytics(shortId) {
+      const analyticsDiv = document.getElementById("analytics");
+      analyticsDiv.innerHTML = "Fetching analytics...";
+
+      try {
+        const res = await fetch(`${backend}/url/analytics/${shortId}`);
+        const data = await res.json();
+
+        if (data.error) {
+          analyticsDiv.innerHTML = `<p style="color:red">${data.error}</p>`;
+          return;
+        }
+
+        let html = `<h3>Analytics</h3>`;
+        html += `<p><strong>Total Clicks:</strong> ${data.totalcliks}</p>`;
+        html += `<ul>`;
+        data.analytics.forEach(item => {
+          const time = new Date(item.timestamp).toLocaleString();
+          html += `<li>Visited at: ${time}</li>`;
+        });
+        html += `</ul>`;
+
+        analyticsDiv.innerHTML = html;
+      } catch (error) {
+        analyticsDiv.innerHTML = "<p style='color:red;'>Failed to fetch analytics.</p>";
+        console.error(error);
+      }
+    }
+  </script>
+</body>
+</html>
